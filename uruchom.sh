@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Pytajnik: TTS i STT na jednej karcie (~8 GB VRAM), LLM z OpenRouter, bot Pipecat.
+# Pytajnik: TTS i STT lokalnie, LLM z OpenRouter, bot Pipecat. PYTAJNIK_SPRZET w .env:
+#   pelny (domyślnie) - VoxCPM2 + Canary na GPU (~8 GB VRAM)
+#   lekki             - Canary int8 + Supertonic 3 / Matcha na CPU (laptop bez GPU); głos: PYTAJNIK_GLOS_LEKKI
 # Każda usługa startuje dopiero, gdy poprzednia odpowiada na /health.
 #   bash uruchom.sh [domyślny_plik_z_pytaniami.txt]     # potem http://localhost:7860 (wgrywanie pytań)
 #   bash zatrzymaj.sh
@@ -31,8 +33,14 @@ start() {  # nazwa, port (0 = bez /health), polecenie...
     echo "${name}: brak odpowiedzi na /health po 10 min" >&2; exit 1
 }
 
-start tts 8002 .venv-tts/bin/python tts_voxcpm2/server.py --port 8002 --voices glosy --default-voice poziomka
-start stt 8001 .venv-stt/bin/python stt_canary/server.py --port 8001
+if [[ "${PYTAJNIK_SPRZET:-pelny}" == lekki ]]; then
+    W="${PYTAJNIK_WATKI:-4}"
+    start tts 8002 .venv-lekki/bin/python tts_lekki/server.py --port 8002 --voice "${PYTAJNIK_GLOS_LEKKI:-supertonic-F1}" --threads "${W}"
+    start stt 8001 .venv-lekki/bin/python stt_lekki/server.py --port 8001 --threads "${W}"
+else
+    start tts 8002 .venv-tts/bin/python tts_voxcpm2/server.py --port 8002 --voices glosy --default-voice poziomka
+    start stt 8001 .venv-stt/bin/python stt_canary/server.py --port 8001
+fi
 start bot 0 .venv-bot/bin/python bot/bot.py -t webrtc --host "${BOT_HOST:-0.0.0.0}" --port "${BOT_PORT:-7860}"
 for _ in $(seq 1 40); do
     curl -sf -o /dev/null "http://localhost:${BOT_PORT:-7860}/client/" && break
@@ -40,4 +48,6 @@ for _ in $(seq 1 40); do
 done
 echo "Pytajnik: http://localhost:${BOT_PORT:-7860}"
 [[ "${BOT_HOST:-0.0.0.0}" == 0.0.0.0 ]] && echo "w sieci:   http://$(hostname -I | awk '{print $1}'):${BOT_PORT:-7860}"
-nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
+if [[ "${PYTAJNIK_SPRZET:-pelny}" != lekki ]] && command -v nvidia-smi > /dev/null; then
+    nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
+fi

@@ -51,10 +51,37 @@ Bez głosu i GPU, do sprawdzenia pliku i zachowania modelu:
 PYTANIA=pytania/podatki.txt .venv-bot/bin/python testy/test_tekst.py
 ```
 
+## Tryb lekki: laptop bez GPU
+
+`PYTAJNIK_SPRZET=lekki` w `.env` przełącza STT i TTS na CPU, bez torcha i CUDA (ok. 0,5 GB środowisk, ok. 1,5 GB modeli):
+
+- STT: Canary-1b-v2 w int8 (ONNX, `onnx-asr`), ten sam model co na GPU. Wypowiedź 3–8 s przepisuje się w 0,6–1,5 s na 4 rdzeniach.
+- TTS (`PYTAJNIK_GLOS_LEKKI`): `supertonic-F1`…`F5` / `supertonic-M1`…`M5` (Supertonic 3, naturalniejszy) albo
+  `matcha-female` / `matcha-male` (Matcha-TTS-PL-Edge-v2, najszybszy). Oba czytają poprawnie skróty typu VAT i KSeF.
+
+```
+bash setup_venvs.sh                                   # przy PYTAJNIK_SPRZET=lekki: .venv-lekki i .venv-bot
+bash uruchom.sh
+```
+
+## Windows
+
+Tryb lekki, bez GPU, bez Visual Studio i bez osobnego espeak-ng:
+
+1. Pobierz repo (Code → Download ZIP) i rozpakuj.
+2. Dwuklik w **`instaluj.bat`**: instaluje `uv`, Pythona 3.11 i środowiska, pyta o klucz OpenRouter i głos, pobiera
+   modele i tworzy skrót „Pytajnik” na pulpicie. Ponowne uruchomienie zmienia klucz albo głos.
+3. Dwuklik w skrócie albo w **`uruchom.bat`**: startuje usługi i otwiera przeglądarkę. Enter w oknie zatrzymuje
+   Pytajnika (awaryjnie `zatrzymaj.bat`). Logi w `logi\`.
+
+Na Windows bot domyślnie słucha tylko na `localhost` (`BOT_HOST=0.0.0.0` w `.env` udostępnia go w sieci).
+
 ## Ustawienia (zmienne środowiskowe)
 
 | zmienna | domyślnie | |
 |---|---|---|
+| `PYTAJNIK_SPRZET` | `pelny` | `lekki` = STT i TTS na CPU (laptop, Windows) |
+| `PYTAJNIK_GLOS_LEKKI` | `supertonic-F1` | głos trybu lekkiego |
 | `PYTAJNIK_MODEL` | `openai/gpt-6.1-sol` | dowolny model z OpenRouter |
 | `PYTAJNIK_REASONING` | `low` | reasoning effort; pusty = domyślny modelu |
 | `BOT_CISZA` | `1.2` | ile sekund ciszy kończy odpowiedź |

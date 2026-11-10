@@ -14,6 +14,8 @@ każdą odpowiedź i daje wskazówki, a na końcu podsumowuje wynik.
 | plik z pytaniami | dowolny tekst (np. wklejony z PDF); model wyciąga pytania i odpowiedzi do JSON (structured outputs), cache w `dane/pytania/<sha256>.json` | PDF-y rozbijają pytania na linie, warianty A/B/C i klucze odpowiedzi w różnych miejscach; reguły by tego nie objęły |
 | własne pytania | strona `/` (`bot/strona.py`, `strona.html`) nad runnerem Pipecat; zestaw wybrany na urządzeniu w ciasteczku, ASGI middleware przepisuje je do contextvar czytanego przez `bot()` | prebuilt UI nie pozwala dołożyć danych do `/api/offer`, ale wysyła ciasteczka, a bot startuje w zadaniu tła tego żądania |
 | sieć lokalna | `--host 0.0.0.0`, bez HTTPS | mikrofon przez http na innych urządzeniach wymaga w Firefoksie `dom.securecontext.allowlist` = IP komputera (sprawdzone: daje isSecureContext, getUserMedia i AudioWorklet) |
+| tryb lekki (CPU) | `PYTAJNIK_SPRZET=lekki`: Canary-1b-v2 int8 (onnx-asr) + Supertonic 3 albo Matcha-TTS-PL-Edge-v2, `stt_lekki/`, `tts_lekki/` z tym samym API | testy z 2026-11-10 na 4 rdzeniach: Canary int8 RTF ok. 0,2 przy jakości jak bf16; z małych TTS Supertonic (WER 3,9%) i Matcha (RTF 0,075) — Piper, MMS, MOSS-Nano, pocket-tts gorsze |
+| Windows | `instaluj.bat` / `uruchom.bat` / `zatrzymaj.bat` + `windows/*.ps1`, tylko tryb lekki | wszystkie paczki trybu lekkiego i bota mają wheele win_amd64 (sprawdzone `uv pip compile --python-platform`) poza czysto pythonowym docopt |
 | klucz API | `.env` w katalogu projektu (w `.gitignore`), czytany przez bota, `uruchom.sh` i `testy/test_tekst.py` | |
 | koniec tury | `user_speech_timeout` 1,2 s (`BOT_CISZA`) zamiast 0,6 s | przy odpowiadaniu ludzie robią pauzy na zastanowienie |
 

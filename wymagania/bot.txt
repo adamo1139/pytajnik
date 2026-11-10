@@ -1,0 +1,3 @@
+# Bot Pipecat: WebRTC + prebuilt UI (runner), Silero VAD, klienci OpenAI (STT, LLM przez OpenRouter, TTS).
+pipecat-ai[webrtc,runner,silero,openai]==1.14.0
+httpx==0.28.1
