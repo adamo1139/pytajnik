@@ -1,0 +1,8 @@
+# Przykładowy zestaw: jedno pytanie w linii, opcjonalnie " | " i wzorcowa odpowiedź.
+# Puste linie i linie od "#" są pomijane.
+Jaka jest stolica Australii? | Canberra
+W którym roku odbył się chrzest Polski? | 966
+Ile wynosi pierwiastek kwadratowy ze stu czterdziestu czterech? | 12
+Wyjaśnij krótko, czym jest fotosynteza.
+Kto napisał „Pana Tadeusza”? | Adam Mickiewicz
+Czym różni się pogoda od klimatu?

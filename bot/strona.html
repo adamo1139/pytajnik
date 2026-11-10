@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pytajnik</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --text: #1d1c1a; --muted: #6b6862; --line: #e3e0da;
+    --accent: #2f6f4f; --accent-text: #ffffff; --warn-bg: #fff4dc; --warn-line: #e8c77a; --err: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --card: #201f1d; --text: #ecebe7; --muted: #a29f98; --line: #34322e;
+      --accent: #5fb487; --accent-text: #0f1a14; --warn-bg: #2e2716; --warn-line: #6b5a2c; --err: #f2867d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .warn { background: var(--warn-bg); border-color: var(--warn-line); font-size: 14px; }
+  .warn code { word-break: break-all; }
+  button, .btn {
+    font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-block;
+  }
+  .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button:disabled { opacity: .6; cursor: wait; }
+  input[type=text], textarea {
+    width: 100%; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  textarea { min-height: 220px; resize: vertical; font-size: 14px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 12px 0 4px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .err { color: var(--err); font-size: 14px; }
+  ol { padding-left: 22px; margin: 8px 0 0; font-size: 14px; }
+  ol li { margin-bottom: 6px; }
+  ol .odp { color: var(--muted); }
+  ul.sets { list-style: none; padding: 0; margin: 0; }
+  ul.sets li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  ul.sets li:first-child { border-top: 0; }
+  .tag { font-size: 12px; color: var(--accent); font-weight: 600; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 14px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pytajnik</h1>
+  <p class="sub">Wgraj pytania, a Pytajnik przepyta cię z nich na głos w losowej kolejności i podpowie, co poprawić.</p>
+
+  <section class="warn" id="insecure" hidden>
+    <strong>Mikrofon może tu nie działać.</strong> Przeglądarka pozwala na mikrofon przez zwykłe http tylko na
+    <code>localhost</code>. W Firefoksie otwórz <code>about:config</code>, wyszukaj
+    <code>dom.securecontext.allowlist</code>, wpisz jako wartość <code id="host"></code> i odśwież stronę.
+    Na Androidzie <code>about:config</code> jest tylko w Firefox Beta i Nightly.
+  </section>
+
+  <section>
+    <h2>Aktualny zestaw</h2>
+    <div id="current"><p class="muted">Ładowanie…</p></div>
+  </section>
+
+  <section>
+    <h2>Wgraj własne pytania</h2>
+    <p class="muted">Wklej tekst w dowolnej formie, także skopiowany z PDF: pytania otwarte, zamknięte z wariantami
+      A/B/C, z odpowiedziami albo bez. Model sam wyciągnie z niego pytania i odpowiedzi.</p>
+    <label for="nazwa">Nazwa zestawu (opcjonalnie)</label>
+    <input type="text" id="nazwa" placeholder="np. VAT — rozdział 3">
+    <label for="tekst">Pytania</label>
+    <textarea id="tekst" placeholder="1. Jaka jest podstawowa stawka VAT?&#10;A) 22%  B) 23%  C) 25%&#10;&#10;2. Wyjaśnij, czym jest split payment."></textarea>
+    <div class="row">
+      <button class="primary" id="wgraj">Wczytaj pytania</button>
+      <label class="btn" style="margin:0">Z pliku .txt<input type="file" id="plik" accept=".txt,text/plain" hidden></label>
+      <span id="status" class="muted"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Zapisane zestawy</h2>
+    <ul class="sets" id="sets"></ul>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+if (!window.isSecureContext) { $("insecure").hidden = false; $("host").textContent = location.hostname; }
+
+function pokazAktualny(nazwa, pytania) {
+  if (!pytania.length) {
+    $("current").innerHTML = '<p class="muted">Brak pytań. Wgraj je poniżej.</p>';
+    return;
+  }
+  const lista = pytania.map((p) =>
+    `<li>${esc(p.pytanie)}${p.odpowiedz ? `<br><span class="odp">Odpowiedź: ${esc(p.odpowiedz)}</span>` : ""}</li>`).join("");
+  $("current").innerHTML = `
+    <p><strong>${esc(nazwa)}</strong> · ${pytania.length} pytań</p>
+    <div class="row"><a class="btn primary" href="/client/">Zacznij przepytywanie →</a></div>
+    <details><summary>Pokaż wyciągnięte pytania</summary><ol>${lista}</ol></details>`;
+}
+
+async function odswiez() {
+  const r = await fetch("/api/zestawy");
+  const d = await r.json();
+  const akt = d.zestawy.find((z) => z.id === d.wybrany);
+  pokazAktualny(akt ? akt.nazwa : "", d.pytania);
+  $("sets").innerHTML = d.zestawy.length ? d.zestawy.map((z) => `
+    <li><span>${esc(z.nazwa)} <span class="muted">· ${z.liczba} pytań</span></span>
+      ${z.id === d.wybrany ? '<span class="tag">wybrany</span>' : `<button data-id="${z.id}">Wybierz</button>`}</li>`).join("")
+    : '<li class="muted">Jeszcze nic.</li>';
+}
+
+$("sets").addEventListener("click", async (e) => {
+  const id = e.target.dataset.id;
+  if (!id) return;
+  await fetch(`/api/zestaw/${id}`, { method: "POST" });
+  odswiez();
+});
+
+$("plik").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  $("tekst").value = await f.text();
+  if (!$("nazwa").value) $("nazwa").value = f.name.replace(/\.txt$/i, "");
+});
+
+$("wgraj").addEventListener("click", async () => {
+  const tekst = $("tekst").value;
+  if (!tekst.trim()) { $("status").innerHTML = '<span class="err">Wklej najpierw pytania.</span>'; return; }
+  $("wgraj").disabled = true;
+  $("status").textContent = "Model czyta pytania, to może potrwać do minuty…";
+  try {
+    const r = await fetch("/api/pytania", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tekst, nazwa: $("nazwa").value }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+    $("status").textContent = `Gotowe: ${d.pytania.length} pytań.`;
+    $("tekst").value = ""; $("nazwa").value = "";
+    await odswiez();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    $("status").innerHTML = `<span class="err">Nie udało się: ${esc(err.message)}</span>`;
+  } finally {
+    $("wgraj").disabled = false;
+  }
+});
+
+odswiez();
+</script>
+</body>
+</html>
