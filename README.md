@@ -35,7 +35,7 @@ Przykłady: [pytania/przyklad.txt](pytania/przyklad.txt), [pytania/podatki.txt](
 git clone https://github.com/adamo1139/pytajnik && cd pytajnik
 bash setup_venvs.sh                                   # .venv-tts .venv-stt .venv-bot (~15 GB)
 # mało miejsca? VENV_DIR=/inny/dysk bash setup_venvs.sh  — venvy tam, tu dowiązania .venv-*
-echo 'OPENROUTER_API_KEY=sk-or-...' > .env                # klucz, plik jest w .gitignore
+cp .env.example .env                                  # wpisz OPENROUTER_API_KEY; .env jest w .gitignore
 bash uruchom.sh [pytania/podatki.txt]                 # TTS -> STT -> bot, potem http://localhost:7860
 bash zatrzymaj.sh
 ```
